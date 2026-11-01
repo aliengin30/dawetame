@@ -5,9 +5,9 @@ otomatik oluşur. Davetiye: /d/<adres>. Müşteri paneli: /admin.html?s=<adres>&
 
 ## Kurulum (bir kez)
 1. Cloudflare > Workers & Pages > KV > namespace oluşturun (ad: davet). ID'yi wrangler.toml'daki BURAYA_KV_ID yerine yazın.
-2. R2 > bucket oluşturun (ad: davetiye-foto). (R2 için ödeme yöntemi eklemeniz istenir; düşük kullanımda ücretsiz katman yeter.)
+2. (Fotoğraflar da aynı KV alanında saklanır, ayrıca bir şey kurmanız gerekmez.)
 3. Bu klasörü Pages projesi olarak yükleyin (`npx wrangler pages deploy public`).
-4. Pages projesi > Settings > Bindings: KV için DAVET, R2 için FOTO adlarıyla bağlayın.
+4. Pages projesi > Settings > Bindings: KV için DAVET adıyla bağlayın.
 5. Settings > Variables and Secrets (Secret olarak ekleyin):
    - MASTER_KEY : kendi uzun şifreniz (yeni.html için)
    - MERCHANT_ID, MERCHANT_KEY, MERCHANT_SALT : PayTR mağaza paneli > Bilgi sayfası

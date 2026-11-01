@@ -84,12 +84,12 @@ export async function onRequest({request,env,params}){
       }
       return new Response('OK');
     }
-    /* --- fotoğraf okuma (herkese açık) --- */
+    /* --- fotoğraf okuma (herkese açık, KV'de saklanır) --- */
     if(a==='img'&&m==='GET'){
-      if(!env.FOTO||!/^[a-z0-9-]+$/.test(p[1]||'')||!/^[a-f0-9]{16}\.(jpg|png|webp)$/.test(p[2]||''))return new Response('yok',{status:404});
-      const obj=await env.FOTO.get('img/'+p[1]+'/'+p[2]);
-      if(!obj)return new Response('yok',{status:404});
-      return new Response(obj.body,{headers:{'content-type':obj.httpMetadata.contentType,'cache-control':'public, max-age=31536000, immutable'}});
+      if(!/^[a-z0-9-]+$/.test(p[1]||'')||!/^[a-f0-9]{16}\.(jpg|png|webp)$/.test(p[2]||''))return new Response('yok',{status:404});
+      const r=await env.DAVET.getWithMetadata('img:'+p[1]+':'+p[2],'arrayBuffer');
+      if(!r.value)return new Response('yok',{status:404});
+      return new Response(r.value,{headers:{'content-type':(r.metadata&&r.metadata.ct)||'image/jpeg','cache-control':'public, max-age=31536000, immutable'}});
     }
     if(!slug)return json({error:'Bulunamadı'},404);
     const rec=await env.DAVET.get('inv:'+slug,'json');
@@ -102,16 +102,15 @@ export async function onRequest({request,env,params}){
     }
     if(a==='upload'&&m==='POST'){
       if(!isAdmin)return json({error:'Yetkisiz'},401);
-      if(!env.FOTO)return json({error:'Fotoğraf depolaması ayarlanmadı'},503);
       const ct=request.headers.get('content-type')||'';
       const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[ct];
       if(!ext)return json({error:'Yalnızca JPG, PNG veya WEBP'},400);
       const buf=await request.arrayBuffer();
       if(buf.byteLength>4e6)return json({error:'Dosya 4 MB üstünde'},413);
-      const l=await env.FOTO.list({prefix:'img/'+slug+'/',limit:50});
-      if(l.objects.length>=12)return json({error:'En fazla 12 fotoğraf'},429);
+      const l=await env.DAVET.list({prefix:'img:'+slug+':',limit:50});
+      if(l.keys.length>=12)return json({error:'En fazla 12 fotoğraf'},429);
       const name=crypto.randomUUID().replace(/-/g,'').slice(0,16)+'.'+ext;
-      await env.FOTO.put('img/'+slug+'/'+name,buf,{httpMetadata:{contentType:ct}});
+      await env.DAVET.put('img:'+slug+':'+name,buf,{metadata:{ct}});
       return json({url:'/api/img/'+slug+'/'+name});
     }
     if(a==='rsvp'){
