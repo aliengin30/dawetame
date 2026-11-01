@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Davetiye paneli</title><style>body{font:17px/1.5 system-ui,sans-serif;max-width:520px;margin:0 auto;padding:20px;background:#f6eee1;color:#4a3628}h1{font-size:24px}label{display:block;font-size:14px;color:#8a6f5a;margin-top:12px}input,textarea{width:100%;font:inherit;padding:10px;border:1px solid #cdb79c;border-radius:6px;background:#fff}button{font:inherit;background:#8b5e3c;color:#fff;border:0;border-radius:24px;padding:12px 26px;margin-top:16px;cursor:pointer}table{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}td,th{border-bottom:1px solid #cdb79c;padding:6px 4px;text-align:left}#msg{margin-top:10px;color:#8b5e3c}</style></head><body>
 <h1>Davetiyenizi düzenleyin</h1><p><a id="onizle" target="_blank">Davetiyeyi görüntüle</a></p>
 <div id="form"></div><div id="msg" role="status"></div>
-<h1>Gelen yanıtlar</h1><p id="ozet"></p><table id="tb"></table>
+<h1>Gelen yanıtlar</h1><button id="yenile" type="button">Yenile</button><p id="ozet"></p><table id="tb"></table>
 <script>
 var q=new URLSearchParams(location.search),slug=q.get('s'),tok=q.get('t'),H={'x-token':tok,'content-type':'application/json'};
 function $(i){return document.getElementById(i)}
@@ -37,8 +37,13 @@ fetch('/api/inv/'+slug).then(function(r){return r.json()}).then(function(C){
     c.foto=c.foto.split('\n').map(function(s){return s.trim()}).filter(Boolean);
     fetch('/api/inv/'+slug,{method:'POST',headers:H,body:JSON.stringify(c)}).then(function(r){$('msg').textContent=r.ok?'Kaydedildi.':'Kaydedilemedi (bağlantı geçersiz olabilir).'})};
 }).catch(function(){$('msg').textContent='Davetiye bulunamadı.'});
-fetch('/api/rsvp/'+slug,{headers:H}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(L){
-  var yes=L.filter(function(x){return x.durum==='Katılıyorum'}),n=yes.reduce(function(a,x){return a+x.kisi},0);
-  $('ozet').textContent=L.length+' yanıt, '+n+' kişi katılıyor.';
-  $('tb').innerHTML='<tr><th>Ad</th><th>Durum</th><th>Kişi</th><th>Not</th></tr>'+L.sort(function(a,b){return a.zaman<b.zaman?1:-1}).map(function(x){return '<tr><td>'+esc(x.ad)+'</td><td>'+esc(x.durum)+'</td><td>'+x.kisi+'</td><td>'+esc(x.not)+'</td></tr>'}).join('')}).catch(function(){});
+function yanitlar(){
+  fetch('/api/rsvp/'+slug,{headers:H,cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(L){
+    var yes=L.filter(function(x){return x.durum==='Katılıyorum'}),n=yes.reduce(function(a,x){return a+x.kisi},0);
+    var t=new Date();$('ozet').textContent=L.length+' yanıt, '+n+' kişi katılıyor. (Son kontrol: '+t.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+')';
+    $('tb').innerHTML='<tr><th>Ad</th><th>Durum</th><th>Kişi</th><th>Not</th></tr>'+L.sort(function(a,b){return a.zaman<b.zaman?1:-1}).map(function(x){return '<tr><td>'+esc(x.ad)+'</td><td>'+esc(x.durum)+'</td><td>'+x.kisi+'</td><td>'+esc(x.not)+'</td></tr>'}).join('')}).catch(function(){});
+}
+$('yenile').onclick=yanitlar;
+yanitlar();setInterval(yanitlar,15000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)yanitlar()});
 </script></body></html>
