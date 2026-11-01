@@ -1,6 +1,6 @@
 // Cloudflare Pages Function: tüm /api/* istekleri
 const TEMALAR=['klasik','gece','sage','gul'];
-const DEFAULT={ana:"Ayşe",es:"Mehmet",tarih:"2027-06-12",saat:"18:00",mekan:"Mekân adı, İlçe, Şehir",harita:"",tema:"klasik",baslik:"Evliliğimize sizi bekliyoruz",iban:"",ibanAd:"",
+const DEFAULT={ana:"Ayşe",es:"Mehmet",tarih:"2027-06-12",saat:"18:00",mekan:"Mekân adı, İlçe, Şehir",harita:"",tema:"klasik",baslik:"Evliliğimize sizi bekliyoruz",iban:"",ibanAd:"",muzik:"",
   mesaj:"Hayatımızın en güzel gününde yanımızda olmanızı çok isteriz.",
   program:[["18:00","Karşılama"],["18:30","Nikâh"],["20:00","Yemek"],["21:00","Dans"]],foto:[],album:""};
 const clip=(s,n)=>String(s==null?'':s).slice(0,n);
@@ -8,7 +8,7 @@ const slugify=s=>String(s||'').toLowerCase().replace(/ç/g,'c').replace(/ğ/g,'g
 function clean(c){
   return {ana:clip(c.ana,40),es:clip(c.es,40),tarih:/^\d{4}-\d{2}-\d{2}$/.test(c.tarih)?c.tarih:DEFAULT.tarih,
     saat:/^\d{2}:\d{2}$/.test(c.saat)?c.saat:DEFAULT.saat,mekan:clip(c.mekan,200),harita:clip(c.harita,500),album:clip(c.album,500),
-    tema:TEMALAR.includes(c.tema)?c.tema:'klasik',baslik:clip(c.baslik,80),iban:(s=>/^TR\d{24}$/.test(s)?s:'')(String(c.iban||'').replace(/\s/g,'').toUpperCase()),ibanAd:clip(c.ibanAd,60),mesaj:clip(c.mesaj,500),
+    tema:TEMALAR.includes(c.tema)?c.tema:'klasik',baslik:clip(c.baslik,80),iban:(s=>/^TR\d{24}$/.test(s)?s:'')(String(c.iban||'').replace(/\s/g,'').toUpperCase()),ibanAd:clip(c.ibanAd,60),muzik:(u=>{u=String(u||'').trim();const m=u.match(/(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/);return m?m[1]:(/^[\w-]{11}$/.test(u)?u:'')})(c.muzik),mesaj:clip(c.mesaj,500),
     program:(Array.isArray(c.program)?c.program:[]).slice(0,20).map(r=>[clip(r[0],10),clip(r[1],60)]),
     foto:(Array.isArray(c.foto)?c.foto:[]).slice(0,12).map(u=>clip(u,500)).filter(u=>/^(https:\/\/|\/api\/img\/)/.test(u))};
 }
