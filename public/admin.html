@@ -1,0 +1,37 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Davetiye paneli</title><style>body{font:17px/1.5 system-ui,sans-serif;max-width:520px;margin:0 auto;padding:20px;background:#f6eee1;color:#4a3628}h1{font-size:24px}label{display:block;font-size:14px;color:#8a6f5a;margin-top:12px}input,textarea{width:100%;font:inherit;padding:10px;border:1px solid #cdb79c;border-radius:6px;background:#fff}button{font:inherit;background:#8b5e3c;color:#fff;border:0;border-radius:24px;padding:12px 26px;margin-top:16px;cursor:pointer}table{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}td,th{border-bottom:1px solid #cdb79c;padding:6px 4px;text-align:left}#msg{margin-top:10px;color:#8b5e3c}</style></head><body>
+<h1>Davetiyenizi düzenleyin</h1><p><a id="onizle" target="_blank">Davetiyeyi görüntüle</a></p>
+<div id="form"></div><div id="msg" role="status"></div>
+<h1>Gelen yanıtlar</h1><p id="ozet"></p><table id="tb"></table>
+<script>
+var q=new URLSearchParams(location.search),slug=q.get('s'),tok=q.get('t'),H={'x-token':tok,'content-type':'application/json'};
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+$('onizle').href='/d/'+slug;
+var T=[['klasik','Klasik (krem)'],['gece','Gece (lacivert-altın)'],['sage','Adaçayı (yeşil)'],['gul','Gül (pembe)']];
+var F=[['tema','Tema','sel'],['ana','Birinci isim'],['es','İkinci isim'],['tarih','Tarih','date'],['saat','Saat','time'],['mekan','Mekân ve adres'],['harita','Harita bağlantısı (boşsa mekândan aranır)'],['mesaj','Davet metni','ta'],['program','Program (her satır: 18:00 | Karşılama)','ta'],['foto','Fotoğraf bağlantıları (her satıra bir https:// adres)','ta'],['album','Anı albümü bağlantısı (Google Drive / Fotoğraflar)']];
+fetch('/api/inv/'+slug).then(function(r){return r.json()}).then(function(C){
+  C.program=C.program.map(function(r){return r.join(' | ')}).join('\n');C.foto=C.foto.join('\n');
+  $('form').innerHTML=F.map(function(f){var v=esc(C[f[0]]);if(f[2]==='sel')return '<label for="tema">Tema</label><select id="tema" style="width:100%;padding:10px">'+T.map(function(t){return '<option value="'+t[0]+'"'+(C.tema===t[0]?' selected':'')+'>'+t[1]+'</option>'}).join('')+'</select>';
+    var up=f[0]==='foto'?'<input id="up" type="file" accept="image/*" multiple style="margin-top:8px"><div id="upmsg"></div>':'';
+    return '<label for="'+f[0]+'">'+f[1]+'</label>'+(f[2]==='ta'?'<textarea id="'+f[0]+'" rows="4">'+v+'</textarea>'+up:'<input id="'+f[0]+'" type="'+(f[2]||'text')+'" value="'+v+'">')}).join('')+'<button id="kaydet">Kaydet</button>';
+  $('up').onchange=async function(e){
+    for(var fl of e.target.files){
+      try{$('upmsg').textContent='Yükleniyor…';
+        var bm=await createImageBitmap(fl),k=Math.min(1,1400/Math.max(bm.width,bm.height)),c=document.createElement('canvas');
+        c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);
+        var blob=await new Promise(function(r){c.toBlob(r,'image/jpeg',0.85)});
+        var r=await fetch('/api/upload/'+slug,{method:'POST',headers:{'x-token':tok,'content-type':'image/jpeg'},body:blob});var j=await r.json();
+        if(!r.ok)throw j;$('foto').value=($('foto').value.trim()+'\n'+j.url).trim();$('upmsg').textContent='Yüklendi. Kaydet\'e basmayı unutmayın.';
+      }catch(x){$('upmsg').textContent=(x&&x.error)||'Yüklenemedi'}
+    }
+  };
+  $('kaydet').onclick=function(){var c={};F.forEach(function(f){c[f[0]]=$(f[0]).value});
+    c.program=c.program.split('\n').map(function(l){var i=l.indexOf('|');return i<0?null:[l.slice(0,i).trim(),l.slice(i+1).trim()]}).filter(Boolean);
+    c.foto=c.foto.split('\n').map(function(s){return s.trim()}).filter(Boolean);
+    fetch('/api/inv/'+slug,{method:'POST',headers:H,body:JSON.stringify(c)}).then(function(r){$('msg').textContent=r.ok?'Kaydedildi.':'Kaydedilemedi (bağlantı geçersiz olabilir).'})};
+}).catch(function(){$('msg').textContent='Davetiye bulunamadı.'});
+fetch('/api/rsvp/'+slug,{headers:H}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(L){
+  var yes=L.filter(function(x){return x.durum==='Katılıyorum'}),n=yes.reduce(function(a,x){return a+x.kisi},0);
+  $('ozet').textContent=L.length+' yanıt, '+n+' kişi katılıyor.';
+  $('tb').innerHTML='<tr><th>Ad</th><th>Durum</th><th>Kişi</th><th>Not</th></tr>'+L.sort(function(a,b){return a.zaman<b.zaman?1:-1}).map(function(x){return '<tr><td>'+esc(x.ad)+'</td><td>'+esc(x.durum)+'</td><td>'+x.kisi+'</td><td>'+esc(x.not)+'</td></tr>'}).join('')}).catch(function(){});
+</script></body></html>

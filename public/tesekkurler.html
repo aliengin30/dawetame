@@ -1,0 +1,11 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Teşekkürler</title>
+<style>body{font:17px/1.5 system-ui,sans-serif;max-width:520px;margin:0 auto;padding:20px;background:#f6eee1;color:#4a3628}a{color:#8b5e3c;word-break:break-all}</style></head><body>
+<h1>Teşekkürler</h1><div id="d">Ödemeniz kontrol ediliyor…</div>
+<script>
+var o=new URLSearchParams(location.search).get('o'),n=0;
+function yokla(){fetch('/api/siparis/'+o).then(function(r){return r.json()}).then(function(j){
+  if(j.durum==='odendi'){var u=location.origin;document.getElementById('d').innerHTML='<p>Davetiyeniz hazır.</p><p><b>Misafirlere gönderin:</b><br><a href="'+u+'/d/'+j.slug+'">'+u+'/d/'+j.slug+'</a></p><p><b>Düzenleme paneliniz (kimseyle paylaşmayın, kaydedin):</b><br><a href="'+u+'/admin.html?s='+j.slug+'&t='+j.token+'">'+u+'/admin.html?s='+j.slug+'&t='+j.token+'</a></p>';return}
+  if(j.durum==='basarisiz'){document.getElementById('d').textContent='Ödeme alınamadı.';return}
+  if(++n<40)setTimeout(yokla,3000);else document.getElementById('d').textContent='Ödemeniz henüz onaylanmadı. Bu sayfayı biraz sonra yenileyin.'}).catch(function(){if(++n<40)setTimeout(yokla,3000)})}
+if(o)yokla();else document.getElementById('d').textContent='Sipariş bulunamadı.';
+</script></body></html>

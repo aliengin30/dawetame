@@ -1,0 +1,18 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Yeni müşteri</title><style>body{font:17px/1.5 system-ui,sans-serif;max-width:520px;margin:0 auto;padding:20px;background:#f6eee1;color:#4a3628}h1{font-size:24px}label{display:block;font-size:14px;color:#8a6f5a;margin-top:12px}input,textarea{width:100%;font:inherit;padding:10px;border:1px solid #cdb79c;border-radius:6px;background:#fff}button{font:inherit;background:#8b5e3c;color:#fff;border:0;border-radius:24px;padding:12px 26px;margin-top:16px;cursor:pointer}table{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}td,th{border-bottom:1px solid #cdb79c;padding:6px 4px;text-align:left}#msg{margin-top:10px;color:#8b5e3c}</style></head><body>
+<h1>Yeni müşteri davetiyesi</h1>
+<label for="mk">Yönetici anahtarı</label><input id="mk" type="password" autocomplete="off">
+<label for="slug">Adres (ör. ayse-mehmet)</label><input id="slug">
+<label for="ana">Birinci isim</label><input id="ana"><label for="es">İkinci isim</label><input id="es">
+<label for="tarih">Tarih</label><input id="tarih" type="date"><label for="saat">Saat</label><input id="saat" type="time" value="18:00">
+<label for="mekan">Mekân ve adres</label><input id="mekan">
+<label for="tema">Tema</label><select id="tema" style="width:100%;padding:10px"><option value="klasik">Klasik</option><option value="gece">Gece</option><option value="sage">Adaçayı</option><option value="gul">Gül</option></select>
+<button id="ol">Oluştur</button><div id="msg" role="status"></div>
+<script>
+function $(i){return document.getElementById(i)}
+$('ol').onclick=function(){
+  var cfg={ana:$('ana').value,es:$('es').value,mekan:$('mekan').value};if($('tarih').value)cfg.tarih=$('tarih').value;if($('saat').value)cfg.saat=$('saat').value;
+  fetch('/api/create/x',{method:'POST',headers:{'x-master':$('mk').value,'content-type':'application/json'},body:JSON.stringify({slug:$('slug').value,cfg:cfg})})
+  .then(function(r){return r.json().then(function(j){if(!r.ok)throw j;return j})})
+  .then(function(j){var o=location.origin;$('msg').innerHTML='<b>Hazır.</b><br>Davetiye (misafirlere): <a href="'+o+'/d/'+j.slug+'">'+o+'/d/'+j.slug+'</a><br>Müşteri paneli (sadece müşteriye): <a href="'+o+'/admin.html?s='+j.slug+'&t='+j.token+'">'+o+'/admin.html?s='+j.slug+'&t='+j.token+'</a>'})
+  .catch(function(j){$('msg').textContent=(j&&j.error)||'Hata'})};
+</script></body></html>

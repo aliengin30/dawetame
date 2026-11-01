@@ -1,0 +1,26 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dijital Düğün Davetiyesi Sipariş</title>
+<style>body{font:17px/1.5 system-ui,sans-serif;max-width:520px;margin:0 auto;padding:20px;background:#f6eee1;color:#4a3628}h1{font-size:26px}label{display:block;font-size:14px;color:#8a6f5a;margin-top:12px}input,select{width:100%;font:inherit;padding:10px;border:1px solid #cdb79c;border-radius:6px;background:#fff}button{font:inherit;background:#8b5e3c;color:#fff;border:0;border-radius:24px;padding:12px 26px;margin-top:16px;cursor:pointer;width:100%}button:disabled{opacity:.6}#msg{margin-top:10px;color:#a33}.hint{font-size:13px;color:#8a6f5a}</style></head><body>
+<h1>Dijital düğün davetiyeniz</h1>
+<p>Mühürlü zarf açılışı, geri sayım, katılım yanıtları ve fotoğraf albümü. Ödemeden hemen sonra davetiyeniz hazır olur.</p>
+<div id="form">
+<label for="ana">Birinci isim</label><input id="ana" required><label for="es">İkinci isim</label><input id="es" required>
+<label for="tarih">Düğün tarihi</label><input id="tarih" type="date"><label for="saat">Saat</label><input id="saat" type="time" value="18:00">
+<label for="mekan">Mekân ve adres</label><input id="mekan">
+<label for="tema">Tema</label><select id="tema"><option value="klasik">Klasik (krem)</option><option value="gece">Gece (lacivert-altın)</option><option value="sage">Adaçayı (yeşil)</option><option value="gul">Gül (pembe)</option></select>
+<label for="slug">Davetiye adresi</label><input id="slug" placeholder="ayse-mehmet"><div class="hint" id="url"></div>
+<label for="adsoyad">Adınız soyadınız</label><input id="adsoyad"><label for="email">E-posta</label><input id="email" type="email"><label for="tel">Telefon</label><input id="tel" type="tel">
+<button id="ode">Ödemeye geç</button><div id="msg" role="alert"></div></div>
+<iframe id="pt" style="display:none;width:100%;border:0" scrolling="no"></iframe>
+<script src="https://www.paytr.com/js/iframeResizer.min.js"></script>
+<script>
+function $(i){return document.getElementById(i)}
+if(location.search.indexOf('hata')>-1)$('msg').textContent='Ödeme tamamlanamadı, tekrar deneyebilirsiniz.';
+$('slug').oninput=function(){$('url').textContent=location.origin+'/d/'+this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')};
+$('ode').onclick=function(){
+  var b=this;b.disabled=true;$('msg').textContent='';
+  var d={};['ana','es','tarih','saat','mekan','tema','slug','adsoyad','email','tel'].forEach(function(k){d[k]=$(k).value});
+  fetch('/api/siparis/x',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(d)})
+  .then(function(r){return r.json().then(function(j){if(!r.ok)throw j;return j})})
+  .then(function(j){$('form').style.display='none';var f=$('pt');f.src='https://www.paytr.com/odeme/guvenli/'+j.token;f.style.display='block';iFrameResize({},'#pt')})
+  .catch(function(j){$('msg').textContent=(j&&j.error)||'Bir hata oluştu';b.disabled=false})};
+</script></body></html>
