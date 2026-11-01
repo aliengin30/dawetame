@@ -20,3 +20,6 @@ otomatik oluşur. Davetiye: /d/<adres>. Müşteri paneli: /admin.html?s=<adres>&
 - Panel bağlantısı müşterinin şifresidir.
 - yeni.html ile ödemesiz (elle) müşteri de oluşturabilirsiniz.
 - PayTR hesabı için işletme/şahıs şirketi gerekir; vergi ve fatura yükümlülükleri size aittir.
+
+## Yönetim
+- https://SITENIZ/yonetim.html : müşteri listesi, bağlantıları yeniden kopyalama, silme.

@@ -35,6 +35,28 @@ export async function onRequest({request,env,params}){
       if(await env.DAVET.get('inv:'+s))return json({error:'Bu adres kullanımda'},409);
       return json({slug:s,token:await createInv(env,s,b.cfg||{})});
     }
+    /* --- yönetici: müşteri listesi ve silme --- */
+    if(a==='admin'){
+      if(!env.MASTER_KEY||request.headers.get('x-master')!==env.MASTER_KEY)return json({error:'Yetkisiz'},401);
+      if(p[1]==='list'&&m==='GET'){
+        const cur=new URL(request.url).searchParams.get('cursor')||undefined;
+        const l=await env.DAVET.list({prefix:'inv:',limit:20,cursor:cur});
+        const items=await Promise.all(l.keys.map(async k=>{
+          const sl=k.name.slice(4),rec=await env.DAVET.get(k.name,'json');if(!rec)return null;
+          const r=await env.DAVET.list({prefix:'rsvp:'+sl+':',limit:1000});
+          return {slug:sl,token:rec.token,ana:rec.cfg.ana,es:rec.cfg.es,tarih:rec.cfg.tarih,yanit:r.keys.length};
+        }));
+        return json({items:items.filter(Boolean),cursor:l.list_complete?null:l.cursor});
+      }
+      if(p[1]==='sil'&&m==='POST'){
+        const sl=slugify(p[2]);if(!sl)return json({error:'Geçersiz'},400);
+        const [r1,r2]=await Promise.all([env.DAVET.list({prefix:'rsvp:'+sl+':',limit:20}),env.DAVET.list({prefix:'img:'+sl+':',limit:20})]);
+        await Promise.all([...r1.keys,...r2.keys].map(k=>env.DAVET.delete(k.name)));
+        if(r1.list_complete&&r2.list_complete){await env.DAVET.delete('inv:'+sl);await env.DAVET.delete('res:'+sl);return json({kalan:false});}
+        return json({kalan:true});
+      }
+      return json({error:'Bulunamadı'},404);
+    }
     /* --- satış: sipariş + PayTR iFrame token --- */
     if(a==='siparis'&&m==='POST'){
       if(!env.MERCHANT_ID||!env.MERCHANT_KEY||!env.MERCHANT_SALT)return json({error:'Ödeme sistemi henüz ayarlanmadı'},503);
