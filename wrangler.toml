@@ -4,8 +4,5 @@ compatibility_date = "2024-11-01"
 
 [[kv_namespaces]]
 binding = "DAVET"
-id = "BURAYA_KV_ID"
+id = "c421b8402cd54c25a51608a0a8ca701b"
 
-[[r2_buckets]]
-binding = "FOTO"
-bucket_name = "davetiye-foto"
