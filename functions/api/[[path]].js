@@ -8,7 +8,7 @@ const slugify=s=>String(s||'').toLowerCase().replace(/ç/g,'c').replace(/ğ/g,'g
 function clean(c){
   return {ana:clip(c.ana,40),es:clip(c.es,40),tarih:/^\d{4}-\d{2}-\d{2}$/.test(c.tarih)?c.tarih:DEFAULT.tarih,
     saat:/^\d{2}:\d{2}$/.test(c.saat)?c.saat:DEFAULT.saat,mekan:clip(c.mekan,200),harita:clip(c.harita,500),album:clip(c.album,500),
-    tema:TEMALAR.includes(c.tema)?c.tema:'klasik',baslik:clip(c.baslik,80),iban:(s=>/^TR\d{24}$/.test(s)?s:'')(String(c.iban||'').replace(/\s/g,'').toUpperCase()),ibanAd:clip(c.ibanAd,60),muzik:(u=>{u=String(u||'').trim();const m=u.match(/(?:youtu\.be\/|[?&]v=|shorts\/|embed\/)([\w-]{11})/);return m?m[1]:(/^[\w-]{11}$/.test(u)?u:'')})(c.muzik),mesaj:clip(c.mesaj,500),
+    tema:TEMALAR.includes(c.tema)?c.tema:'klasik',baslik:clip(c.baslik,80),iban:(s=>/^TR\d{24}$/.test(s)?s:'')(String(c.iban||'').replace(/\s/g,'').toUpperCase()),ibanAd:clip(c.ibanAd,60),muzik:(u=>/^\/api\/img\/[a-z0-9-]+\/[a-f0-9]{16}\.mp3$/.test(u)?u:'')(String(c.muzik||'')),mesaj:clip(c.mesaj,500),
     program:(Array.isArray(c.program)?c.program:[]).slice(0,20).map(r=>[clip(r[0],10),clip(r[1],60)]),
     foto:(Array.isArray(c.foto)?c.foto:[]).slice(0,12).map(u=>clip(u,500)).filter(u=>/^(https:\/\/|\/api\/img\/)/.test(u))};
 }
@@ -86,10 +86,18 @@ export async function onRequest({request,env,params}){
     }
     /* --- fotoğraf okuma (herkese açık, KV'de saklanır) --- */
     if(a==='img'&&m==='GET'){
-      if(!/^[a-z0-9-]+$/.test(p[1]||'')||!/^[a-f0-9]{16}\.(jpg|png|webp)$/.test(p[2]||''))return new Response('yok',{status:404});
+      if(!/^[a-z0-9-]+$/.test(p[1]||'')||!/^[a-f0-9]{16}\.(jpg|png|webp|mp3)$/.test(p[2]||''))return new Response('yok',{status:404});
       const r=await env.DAVET.getWithMetadata('img:'+p[1]+':'+p[2],'arrayBuffer');
       if(!r.value)return new Response('yok',{status:404});
-      return new Response(r.value,{headers:{'content-type':(r.metadata&&r.metadata.ct)||'image/jpeg','cache-control':'public, max-age=31536000, immutable'}});
+      const buf=r.value,n=buf.byteLength,ct=(r.metadata&&r.metadata.ct)||'image/jpeg';
+      const h={'content-type':ct,'cache-control':'public, max-age=31536000, immutable','accept-ranges':'bytes'};
+      const mm=/bytes=(\d*)-(\d*)/.exec(request.headers.get('range')||'');
+      if(mm&&(mm[1]!==''||mm[2]!=='')){
+        const st=mm[1]===''?n-parseInt(mm[2]):parseInt(mm[1]);
+        const en=(mm[1]===''||mm[2]==='')?n-1:Math.min(parseInt(mm[2]),n-1);
+        if(st>=0&&st<=en){h['content-range']='bytes '+st+'-'+en+'/'+n;return new Response(buf.slice(st,en+1),{status:206,headers:h})}
+      }
+      return new Response(buf,{headers:h});
     }
     if(!slug)return json({error:'Bulunamadı'},404);
     const rec=await env.DAVET.get('inv:'+slug,'json');
@@ -103,12 +111,13 @@ export async function onRequest({request,env,params}){
     if(a==='upload'&&m==='POST'){
       if(!isAdmin)return json({error:'Yetkisiz'},401);
       const ct=request.headers.get('content-type')||'';
-      const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[ct];
-      if(!ext)return json({error:'Yalnızca JPG, PNG veya WEBP'},400);
+      const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','audio/mpeg':'mp3'}[ct];
+      if(!ext)return json({error:'Yalnızca JPG, PNG, WEBP veya MP3'},400);
       const buf=await request.arrayBuffer();
-      if(buf.byteLength>4e6)return json({error:'Dosya 4 MB üstünde'},413);
-      const l=await env.DAVET.list({prefix:'img:'+slug+':',limit:50});
-      if(l.keys.length>=12)return json({error:'En fazla 12 fotoğraf'},429);
+      if(buf.byteLength>(ext==='mp3'?8e6:4e6))return json({error:ext==='mp3'?'Şarkı 8 MB üstünde':'Fotoğraf 4 MB üstünde'},413);
+      const l=await env.DAVET.list({prefix:'img:'+slug+':',limit:100});
+      const say=l.keys.filter(k=>k.name.endsWith('.mp3')===(ext==='mp3')).length;
+      if(say>=(ext==='mp3'?5:12))return json({error:ext==='mp3'?'En fazla 5 şarkı yüklenebilir':'En fazla 12 fotoğraf'},429);
       const name=crypto.randomUUID().replace(/-/g,'').slice(0,16)+'.'+ext;
       await env.DAVET.put('img:'+slug+':'+name,buf,{metadata:{ct}});
       return json({url:'/api/img/'+slug+'/'+name});

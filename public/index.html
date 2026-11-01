@@ -46,16 +46,10 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){retur
 function $(i){return document.getElementById(i)}
 var slug=location.pathname.split('/')[2]||'';
 document.getElementById('openBtn').onclick=function(){$('env').classList.add('open');startMusic()};
-var MUZIK='',ytState=-1,ytBtn=null;
-function ytCmd(f){var fr=$('ytf');if(fr&&fr.contentWindow)fr.contentWindow.postMessage(JSON.stringify({event:'command',func:f,args:''}),'*')}
-function ytUi(){if(ytBtn)ytBtn.textContent=ytState===1?'♪ Sesi kapat':(ytState===2?'♪ Sesi aç':'▶ Şarkıyı çal')}
-window.addEventListener('message',function(e){if(String(e.origin).indexOf('youtube.com')<0)return;var d;try{d=JSON.parse(e.data)}catch(x){return}
-  var st=d.event==='onStateChange'?d.info:(d.info&&d.info.playerState);if(typeof st==='number'){ytState=st;ytUi()}});
-function startMusic(){if(!MUZIK||!$('ytf'))return;
-  if(!ytBtn){ytBtn=document.createElement('button');ytBtn.className='btn';ytBtn.style.cssText='position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:5;margin:0';
-    ytBtn.onclick=function(){if(ytState===1){ytCmd('pauseVideo');return}ytCmd('playVideo');setTimeout(function(){if(ytState!==1)$('yt').scrollIntoView({behavior:'smooth',block:'center'})},1200)};
-    document.body.appendChild(ytBtn);ytUi()}
-  ytCmd('playVideo');setTimeout(function(){ytCmd('playVideo')},500);setTimeout(function(){ytCmd('playVideo')},1500)}
+var AUD=null,mBtn=null;
+function startMusic(){if(!AUD)return;var p=AUD.play();if(p&&p.catch)p.catch(function(){});
+  if(!mBtn){mBtn=document.createElement('button');mBtn.className='btn';mBtn.textContent='♪ Sesi kapat';mBtn.style.cssText='position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:5;margin:0';
+    mBtn.onclick=function(){if(AUD.paused){AUD.play();mBtn.textContent='♪ Sesi kapat'}else{AUD.pause();mBtn.textContent='♪ Sesi aç'}};document.body.appendChild(mBtn)}}
 fetch('/api/inv/'+encodeURIComponent(slug)).then(function(r){if(!r.ok)throw 0;return r.json()}).then(render).catch(function(){
   $('env').style.display='none';$('app').innerHTML='<main><h2>Davetiye bulunamadı</h2><p>Bağlantıyı kontrol edin.</p></main>'});
 function render(C){
@@ -69,9 +63,8 @@ function render(C){
   h+='<section><h2>Program</h2><ul>'+C.program.map(function(r){return '<li><b>'+esc(r[0])+'</b><span>'+esc(r[1])+'</span></li>'}).join('')+'</ul><p class="small" style="margin-top:16px">'+esc(C.mekan)+'</p><a class="btn" href="'+esc(maps)+'" target="_blank" rel="noopener">Yol tarifi al</a></section>';
   if(C.iban)h+='<section><h2>Hediye ve destek</h2><p>Aramızda olamayacak sevdiklerimiz için hesap bilgilerimiz:</p><p><b>'+esc(C.ibanAd)+'</b><br><span>'+esc(C.iban.replace(/(.{4})/g,'$1 ').trim())+'</span></p><button class="btn" id="kp" type="button">IBAN kopyala</button></section>';
   h+='<section><h2>Katılım</h2><form id="f"><div><label for="ad">Adınız soyadınız</label><input id="ad" required maxlength="80"></div><div class="choice"><label><input type="radio" name="k" value="Katılıyorum" checked><span>Katılıyorum</span></label><label><input type="radio" name="k" value="Katılamıyorum"><span>Katılamıyorum</span></label></div><div><label for="kisi">Kaç kişi geleceksiniz?</label><input id="kisi" type="number" min="1" max="20" value="1"></div><div><label for="not">Notunuz</label><textarea id="not" rows="3" maxlength="400"></textarea></div><button class="btn" style="justify-self:center">Gönder</button><div id="ok" role="status"></div></form></section>';
-  if(C.muzik)h+='<section><h2>Bizim şarkımız</h2><div id="yt"><iframe id="ytf" width="100%" style="aspect-ratio:16/9;max-width:360px;border:0" src="https://www.youtube.com/embed/'+C.muzik+'?loop=1&playlist='+C.muzik+'&playsinline=1&enablejsapi=1" allow="autoplay; encrypted-media" title="Şarkı"></iframe></div></section>';
   if(C.album)h+='<section><h2>Anı Albümü</h2><p>Bu özel günün fotoğraf ve videolarını bizimle paylaşın.</p><a class="btn" href="'+esc(C.album)+'" target="_blank" rel="noopener">Fotoğraf veya video yükle</a></section>';
-  $('app').innerHTML=h+'</main>';MUZIK=C.muzik||'';var fr=$('ytf');if(fr)fr.onload=function(){fr.contentWindow.postMessage(JSON.stringify({event:'listening',id:1,channel:'widget'}),'*')};if($('env').classList.contains('open'))startMusic();
+  $('app').innerHTML=h+'</main>';if(AUD){AUD.pause();AUD=null}if(C.muzik){AUD=new Audio(C.muzik);AUD.loop=true;AUD.preload='auto'}if($('env').classList.contains('open'))startMusic();
   var kp=$('kp');if(kp)kp.onclick=function(){var ok=function(){kp.textContent='Kopyalandı'};try{navigator.clipboard.writeText(C.iban).then(ok,function(){prompt('IBAN',C.iban)})}catch(e){prompt('IBAN',C.iban)}};
   $('f').onsubmit=function(e){e.preventDefault();var b=e.target.querySelector('button');b.disabled=true;
     fetch('/api/rsvp/'+encodeURIComponent(slug),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ad:$('ad').value,durum:document.querySelector('input[name=k]:checked').value,kisi:$('kisi').value,not:$('not').value})})

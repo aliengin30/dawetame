@@ -8,12 +8,19 @@ function $(i){return document.getElementById(i)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 $('onizle').href='/d/'+slug;
 var T=[['klasik','Klasik (krem)'],['gece','Gece (lacivert-altın)'],['sage','Adaçayı (yeşil)'],['gul','Gül (pembe)']];
-var F=[['tema','Tema','sel'],['ana','Birinci isim'],['es','İkinci isim'],['baslik','Üst yazı (isimlerin üstündeki cümle)'],['tarih','Tarih','date'],['saat','Saat','time'],['mekan','Düğün yeri (salon adı ve adres)'],['harita','Harita bağlantısı (boşsa mekândan aranır)'],['mesaj','Davet sözleri (isimlerin altındaki yazı)','ta'],['program','Program (her satır: 18:00 | Karşılama)','ta'],['foto','Fotoğraf bağlantıları (her satıra bir https:// adres)','ta'],['iban','IBAN (TR ile başlar; boş bırakırsanız bölüm görünmez)'],['ibanAd','IBAN hesap sahibinin adı soyadı'],['muzik','Şarkı (YouTube bağlantısı; boş bırakırsanız şarkı çalmaz)'],['album','Anı albümü bağlantısı (Google Drive / Fotoğraflar)']];
+var F=[['tema','Tema','sel'],['ana','Birinci isim'],['es','İkinci isim'],['baslik','Üst yazı (isimlerin üstündeki cümle)'],['tarih','Tarih','date'],['saat','Saat','time'],['mekan','Düğün yeri (salon adı ve adres)'],['harita','Harita bağlantısı (boşsa mekândan aranır)'],['mesaj','Davet sözleri (isimlerin altındaki yazı)','ta'],['program','Program (her satır: 18:00 | Karşılama)','ta'],['foto','Fotoğraf bağlantıları (her satıra bir https:// adres)','ta'],['iban','IBAN (TR ile başlar; boş bırakırsanız bölüm görünmez)'],['ibanAd','IBAN hesap sahibinin adı soyadı'],['muzik','Şarkı','mp3'],['album','Anı albümü bağlantısı (Google Drive / Fotoğraflar)']];
 fetch('/api/inv/'+slug).then(function(r){return r.json()}).then(function(C){
-  C.program=C.program.map(function(r){return r.join(' | ')}).join('\n');C.foto=C.foto.join('\n');C.muzik=C.muzik?'https://youtu.be/'+C.muzik:'';
+  C.program=C.program.map(function(r){return r.join(' | ')}).join('\n');C.foto=C.foto.join('\n');
   $('form').innerHTML=F.map(function(f){var v=esc(C[f[0]]);if(f[2]==='sel')return '<label for="tema">Tema</label><select id="tema" style="width:100%;padding:10px">'+T.map(function(t){return '<option value="'+t[0]+'"'+(C.tema===t[0]?' selected':'')+'>'+t[1]+'</option>'}).join('')+'</select>';
+    if(f[2]==='mp3')return '<label for="mp">Açılışta çalacak şarkı (MP3, en fazla 8 MB)</label><input id="mp" type="file" accept="audio/mpeg,.mp3"><div id="mpmsg"></div><div id="mpcur"></div><input type="hidden" id="muzik" value="'+esc(C.muzik)+'">';
     var up=f[0]==='foto'?'<input id="up" type="file" accept="image/*" multiple style="margin-top:8px"><div id="upmsg"></div>':'';
     return '<label for="'+f[0]+'">'+f[1]+'</label>'+(f[2]==='ta'?'<textarea id="'+f[0]+'" rows="4">'+v+'</textarea>'+up:'<input id="'+f[0]+'" type="'+(f[2]||'text')+'" value="'+v+'">')}).join('')+'<button id="kaydet">Kaydet</button>';
+  function mcur(){var v=$('muzik').value;$('mpcur').innerHTML=v?'<audio controls src="'+esc(v)+'" style="width:100%;margin-top:8px"></audio><button type="button" id="mrm" style="background:#a33">Şarkıyı kaldır</button>':'';if(v)$('mrm').onclick=function(){$('muzik').value='';mcur();$('mpmsg').textContent='Kaldırıldı. Kaydet\'e basmayı unutmayın.'}}
+  mcur();
+  $('mp').onchange=async function(e){var fl=e.target.files[0];if(!fl)return;
+    if(fl.size>8e6){$('mpmsg').textContent='Dosya 8 MB üstünde';return}
+    try{$('mpmsg').textContent='Yükleniyor…';var r=await fetch('/api/upload/'+slug,{method:'POST',headers:{'x-token':tok,'content-type':'audio/mpeg'},body:fl});var j=await r.json();if(!r.ok)throw j;
+      $('muzik').value=j.url;mcur();$('mpmsg').textContent='Yüklendi. Kaydet\'e basmayı unutmayın.'}catch(x){$('mpmsg').textContent=(x&&x.error)||'Yüklenemedi'}};
   $('up').onchange=async function(e){
     for(var fl of e.target.files){
       try{$('upmsg').textContent='Yükleniyor…';
