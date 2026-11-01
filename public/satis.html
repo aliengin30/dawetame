@@ -5,9 +5,10 @@
 <div id="form">
 <label for="ana">Birinci isim</label><input id="ana" required><label for="es">İkinci isim</label><input id="es" required>
 <label for="tarih">Düğün tarihi</label><input id="tarih" type="date"><label for="saat">Saat</label><input id="saat" type="time" value="18:00">
-<label for="mekan">Mekân ve adres</label><input id="mekan">
+<label for="mekan">Düğün yeri (salon adı ve adres)</label><input id="mekan">
+<label for="baslik">Üst yazı (isteğe bağlı)</label><input id="baslik" placeholder="Evliliğimize sizi bekliyoruz"><label for="mesaj">Davet sözleri (isteğe bağlı)</label><textarea id="mesaj" rows="3" style="width:100%;font:inherit;padding:10px;border:1px solid #cdb79c;border-radius:6px"></textarea>
 <label for="tema">Tema</label><select id="tema"><option value="klasik">Klasik (krem)</option><option value="gece">Gece (lacivert-altın)</option><option value="sage">Adaçayı (yeşil)</option><option value="gul">Gül (pembe)</option></select>
-<label for="slug">Davetiye adresi</label><input id="slug" placeholder="ayse-mehmet"><div class="hint" id="url"></div>
+<label for="slug">Davetiye bağlantı adı (sadece harf ve tire)</label><input id="slug" placeholder="ayse-mehmet"><div class="hint" id="url"></div>
 <label for="adsoyad">Adınız soyadınız</label><input id="adsoyad"><label for="email">E-posta</label><input id="email" type="email"><label for="tel">Telefon</label><input id="tel" type="tel">
 <button id="ode">Ödemeye geç</button><div id="msg" role="alert"></div></div>
 <iframe id="pt" style="display:none;width:100%;border:0" scrolling="no"></iframe>
@@ -18,7 +19,7 @@ if(location.search.indexOf('hata')>-1)$('msg').textContent='Ödeme tamamlanamad�
 $('slug').oninput=function(){$('url').textContent=location.origin+'/d/'+this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')};
 $('ode').onclick=function(){
   var b=this;b.disabled=true;$('msg').textContent='';
-  var d={};['ana','es','tarih','saat','mekan','tema','slug','adsoyad','email','tel'].forEach(function(k){d[k]=$(k).value});
+  var d={};['ana','es','tarih','saat','mekan','baslik','mesaj','tema','slug','adsoyad','email','tel'].forEach(function(k){d[k]=$(k).value});
   fetch('/api/siparis/x',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(d)})
   .then(function(r){return r.json().then(function(j){if(!r.ok)throw j;return j})})
   .then(function(j){$('form').style.display='none';var f=$('pt');f.src='https://www.paytr.com/odeme/guvenli/'+j.token;f.style.display='block';iFrameResize({},'#pt')})

@@ -1,6 +1,6 @@
 // Cloudflare Pages Function: tüm /api/* istekleri
 const TEMALAR=['klasik','gece','sage','gul'];
-const DEFAULT={ana:"Ayşe",es:"Mehmet",tarih:"2027-06-12",saat:"18:00",mekan:"Mekân adı, İlçe, Şehir",harita:"",tema:"klasik",
+const DEFAULT={ana:"Ayşe",es:"Mehmet",tarih:"2027-06-12",saat:"18:00",mekan:"Mekân adı, İlçe, Şehir",harita:"",tema:"klasik",baslik:"Evliliğimize sizi bekliyoruz",iban:"",ibanAd:"",
   mesaj:"Hayatımızın en güzel gününde yanımızda olmanızı çok isteriz.",
   program:[["18:00","Karşılama"],["18:30","Nikâh"],["20:00","Yemek"],["21:00","Dans"]],foto:[],album:""};
 const clip=(s,n)=>String(s==null?'':s).slice(0,n);
@@ -8,7 +8,7 @@ const slugify=s=>String(s||'').toLowerCase().replace(/ç/g,'c').replace(/ğ/g,'g
 function clean(c){
   return {ana:clip(c.ana,40),es:clip(c.es,40),tarih:/^\d{4}-\d{2}-\d{2}$/.test(c.tarih)?c.tarih:DEFAULT.tarih,
     saat:/^\d{2}:\d{2}$/.test(c.saat)?c.saat:DEFAULT.saat,mekan:clip(c.mekan,200),harita:clip(c.harita,500),album:clip(c.album,500),
-    tema:TEMALAR.includes(c.tema)?c.tema:'klasik',mesaj:clip(c.mesaj,500),
+    tema:TEMALAR.includes(c.tema)?c.tema:'klasik',baslik:clip(c.baslik,80),iban:(s=>/^TR\d{24}$/.test(s)?s:'')(String(c.iban||'').replace(/\s/g,'').toUpperCase()),ibanAd:clip(c.ibanAd,60),mesaj:clip(c.mesaj,500),
     program:(Array.isArray(c.program)?c.program:[]).slice(0,20).map(r=>[clip(r[0],10),clip(r[1],60)]),
     foto:(Array.isArray(c.foto)?c.foto:[]).slice(0,12).map(u=>clip(u,500)).filter(u=>/^(https:\/\/|\/api\/img\/)/.test(u))};
 }
@@ -57,7 +57,7 @@ export async function onRequest({request,env,params}){
         timeout_limit:'30',currency:'TL',test_mode:test,lang:'tr'});
       const r=await (await fetch('https://www.paytr.com/odeme/api/get-token',{method:'POST',body})).json();
       if(r.status!=='success')return json({error:'Ödeme başlatılamadı: '+clip(r.reason,150)},502);
-      const cfg=clean({...DEFAULT,ana:b.ana,es:b.es,tarih:b.tarih,saat:b.saat,mekan:b.mekan,tema:b.tema});
+      const cfg=clean({...DEFAULT,ana:b.ana,es:b.es,tarih:b.tarih,saat:b.saat,mekan:b.mekan,tema:b.tema,baslik:b.baslik||DEFAULT.baslik,mesaj:b.mesaj||DEFAULT.mesaj});
       await env.DAVET.put('res:'+s,oid,{expirationTtl:1800});
       await env.DAVET.put('order:'+oid,JSON.stringify({slug:s,cfg,email,durum:'bekliyor'}),{expirationTtl:86400*30});
       return json({token:r.token});
